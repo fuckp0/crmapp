@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Instagram CRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { width: 250px; background-color: #343a40; color: white; height: 100vh; position: fixed; }
+        .sidebar a { color: white; }
+        .sidebar a:hover { background-color: #495057; }
+        .sidebar a.active { background-color: #495057; }
+        .content { margin-left: 270px; padding: 20px; }
+        .card { margin-bottom: 20px; }
+        .non-responder-list { max-height: 300px; overflow-y: auto; }
+        .dm-list { max-height: 400px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="sidebar p-4">
+        <h2 class="text-2xl mb-4">Instagram CRM</h2>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if not selected_account %}active{% endif %}">
+                    All Accounts
+                </a>
+            </li>
+            {% for account in accounts %}
+                <li class="nav-item">
+                    <a href="{{ url_for('dashboard', selected_account=account[0]) }}" class="nav-link {% if selected_account == account[0] %}active{% endif %}">
+                        {{ account[0] }}{% if account[1] %} (Re-auth needed){% endif %}
+                    </a>
+                </li>
+            {% endfor %}
+            <li class="nav-item">
+                <a href="{{ url_for('add_account') }}" class="nav-link">Add Account</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('send_dms') }}" class="nav-link">DM Bot</a>
+            </li>
+            {% if session['role'] == 'admin' %}
+                <li class="nav-item">
+                    <a href="{{ url_for('admin_users') }}" class="nav-link">Manage Users</a>
+                </li>
+            {% endif %}
+            <li class="nav-item">
+                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+            </li>
+        </ul>
+    </div>
+    <div class="content">
+        <h1 class="text-3xl mb-4">Dashboard</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} mb-4">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">Your Plan</h3>
+                <p>Plan: {{ plan if plan else 'No plan assigned' }}</p>
+                <p>Available Credits: {{ credits }}</p>
+            </div>
+        </div>
+        <form action="{{ url_for('send_followup') }}" method="POST" class="mb-4">
+            <input type="hidden" name="selected_account" value="{{ selected_account or '' }}">
+            <div class="input-group mb-2">
+                <input type="text" name="followup" class="form-control" placeholder="Enter follow-up message (optional)">
+                <button type="submit" class="btn btn-primary">Send Follow-ups</button>
+            </div>
+        </form>
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title">Recent DMs</h3>
+                <div class="dm-list">
+                    {% if dms %}
+                        {% for dm in dms %}
+                            <div class="border-bottom py-2">
+                                <p><strong>{{ dm[2] }}</strong> ({{ dm[7] | strftime }})</p>
+                                <p>{{ dm[3] }}</p>
+                                <p>Responded: {{ 'Yes' if dm[4] else 'No' }} | Follow-up Sent: {{ 'Yes' if dm[5] else 'No' }} | System: {{ 'Yes' if dm[6] else 'No' }}</p>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No recent DMs.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title">Non-Responders (Last 24 Hours)</h3>
+                <div class="non-responder-list">
+                    {% if non_responders %}
+                        <ul class="list-group">
+                            {% for contact in non_responders %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ contact }}
+                                    {% if selected_account %}
+                                        <form action="{{ url_for('send_followup') }}" method="POST" class="d-inline">
+                                            <input type="hidden" name="selected_account" value="{{ selected_account }}">
+                                            <input type="hidden" name="followup" value="Hey {{ contact }}, just following up! Are you interested in connecting?">
+                                            <button type="submit" class="btn btn-primary btn-sm">Send Follow-up</button>
+                                        </form>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No non-responders found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% if debug_timestamp %}
+            <p class="text-muted">Debug Timestamp: {{ debug_timestamp | strftime }}</p>
+        {% endif %}
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

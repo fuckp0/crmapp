@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send DMs - Instagram CRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { width: 250px; background-color: #343a40; color: white; height: 100vh; position: fixed; }
+        .sidebar a { color: white; }
+        .sidebar a:hover { background-color: #495057; }
+        .sidebar a.active { background-color: #495057; }
+        .content { margin-left: 270px; padding: 20px; }
+        .form-section { margin-bottom: 20px; background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .message-list { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px; background-color: white; }
+        .message-item { border-bottom: 1px solid #ddd; padding: 10px 0; }
+        .message-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <div class="sidebar p-4">
+        <h2 class="text-2xl mb-4">Instagram CRM</h2>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('add_account') }}" class="nav-link">Add Account</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('send_dms') }}" class="nav-link active">DM Bot</a>
+            </li>
+            {% if session['role'] == 'admin' %}
+                <li class="nav-item">
+                    <a href="{{ url_for('admin_users') }}" class="nav-link">Manage Users</a>
+                </li>
+            {% endif %}
+            <li class="nav-item">
+                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+            </li>
+        </ul>
+    </div>
+    <div class="content">
+        <h1 class="text-3xl mb-4">Send DMs</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} mb-4">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <div class="form-section">
+            <h3>Send Bulk DMs</h3>
+            <form action="{{ url_for('send_dms') }}" method="POST" enctype="multipart/form-data">
+                <div class="mb-4">
+                    <label for="account" class="form-label">Select Account</label>
+                    <select id="account" name="account" class="form-control" required>
+                        {% if accounts %}
+                            {% for account in accounts %}
+                                <option value="{{ account[0] }}">{{ account[0] }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="" disabled selected>No accounts available</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="usernames" class="form-label">Upload Usernames (usernames.txt)</label>
+                    <input type="file" id="usernames" name="usernames" class="form-control" accept=".txt" required>
+                </div>
+                <div class="mb-4">
+                    <label for="messages" class="form-label">Upload Messages (messages.json)</label>
+                    <input type="file" id="messages" name="messages" class="form-control" accept=".json" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Send DMs</button>
+            </form>
+        </div>
+        <div class="form-section">
+            <h3>Message Log</h3>
+            <div class="message-list" id="messageLog"></div>
+        </div>
+    </div>
+    <script>
+        async function fetchLogs() {
+            try {
+                let response = await fetch('/dm-logs');
+                let logs = await response.json();
+                let messageLog = document.getElementById('messageLog');
+                messageLog.innerHTML = '';
+                logs.forEach(log => {
+                    let messageItem = document.createElement('div');
+                    messageItem.className = 'message-item';
+                    let timestamp = log.timestamp ? new Date(log.timestamp * 1000).toLocaleString() : 'N/A';
+                    messageItem.innerHTML = `
+                        <b>${timestamp}</b> - <strong>${log.account}</strong> → <strong>${log.target}</strong>: 
+                        "<em>${log.message}</em>"
+                    `;
+                    messageLog.appendChild(messageItem);
+                });
+            } catch (error) {
+                console.error('Error fetching logs:', error);
+            }
+        }
+        setInterval(fetchLogs, 5000); // Update logs every 5 seconds
+        fetchLogs(); // Initial fetch
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
