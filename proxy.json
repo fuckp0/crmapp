@@ -1,0 +1,9 @@
+{
+    "proxies": [
+      {
+        "http": "http://156.233.109.76:44001",
+        "username": "a0Y67e3c0e6cb332",
+        "password": "IBy5L94ed0M26j31qF"
+      }
+    ]
+  }
